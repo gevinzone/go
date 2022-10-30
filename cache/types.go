@@ -9,6 +9,7 @@ import (
 
 var (
 	errFailToConvertValueType = errors.New("AnyValue: 无法转换类型")
+	ErrKeyNotFound            = errors.New("cache: 找不到 key")
 )
 
 type Cache interface {

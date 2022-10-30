@@ -1,7 +1,7 @@
 package local_cache
 
 import (
-	"github.com/beego/beego/v2/server/web/context"
+	"context"
 	"github.com/gevinzone/go/cache/internal/errs"
 	"sync"
 	"time"
