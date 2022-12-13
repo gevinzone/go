@@ -6,6 +6,7 @@ import (
 	"github.com/gevinzone/go/micro/micro/registry"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/balancer"
+	"google.golang.org/grpc/balancer/base"
 	"google.golang.org/grpc/resolver"
 	"time"
 )
@@ -28,7 +29,7 @@ func NewClient(opts ...ClientOption) *Client {
 
 func (c *Client) Dial(ctx context.Context, service string) (*grpc.ClientConn, error) {
 	opts := []grpc.DialOption{grpc.WithResolvers(c.rb)}
-	address := fmt.Sprintf("r:///%s", service)
+	address := fmt.Sprintf("registry:///%s", service)
 	if c.insecure {
 		opts = append(opts, grpc.WithInsecure())
 	}
@@ -40,6 +41,20 @@ func (c *Client) Dial(ctx context.Context, service string) (*grpc.ClientConn, er
 
 func ClientWithRegistry(r registry.Registry, timeout time.Duration) ClientOption {
 	return func(client *Client) {
-		//client.rb =
+		client.rb = NewResolverBuilder(r, timeout)
+	}
+}
+
+func ClientWithInsecure() ClientOption {
+	return func(client *Client) {
+		client.insecure = true
+	}
+}
+
+func ClientWithPickerBuilder(name string, b base.PickerBuilder) ClientOption {
+	return func(client *Client) {
+		builder := base.NewBalancerBuilder(name, b, base.Config{HealthCheck: true})
+		balancer.Register(builder)
+		client.balancer = builder
 	}
 }

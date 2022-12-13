@@ -35,7 +35,7 @@ func (g *grpcResolverBuilder) Build(target resolver.Target, cc resolver.ClientCo
 }
 
 func (g *grpcResolverBuilder) Scheme() string {
-	return "r"
+	return "registry"
 }
 
 type grpcResolver struct {
@@ -50,12 +50,8 @@ func (g *grpcResolver) ResolveNow(options resolver.ResolveNowOptions) {
 	g.resolve()
 }
 
-func (g *grpcResolver) Close() {
-	g.close <- struct{}{}
-}
-
 func (g *grpcResolver) watch() error {
-	eventsCh, err := g.r.Subscribe(g.target.URL.Path)
+	eventsCh, err := g.r.Subscribe(g.target.URL.Opaque)
 	if err != nil {
 		return err
 	}
@@ -78,7 +74,7 @@ func (g *grpcResolver) resolve() resolver.State {
 	r := g.r
 	ctx, cancel := context.WithTimeout(context.Background(), g.timeout)
 	defer cancel()
-	instances, err := r.ListService(ctx, g.target.URL.Path)
+	instances, err := r.ListService(ctx, g.target.URL.Opaque)
 	if err != nil {
 		g.cc.ReportError(err)
 		return resolver.State{}
@@ -95,6 +91,10 @@ func (g *grpcResolver) resolve() resolver.State {
 		g.cc.ReportError(err)
 	}
 	return state
+}
+
+func (g *grpcResolver) Close() {
+	g.close <- struct{}{}
 }
 
 func newAddress(ins registry.ServiceInstance) resolver.Address {

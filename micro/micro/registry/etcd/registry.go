@@ -25,7 +25,7 @@ type Registry struct {
 	close       chan struct{}
 }
 
-func NewRegister(client *clientV3.Client) (*Registry, error) {
+func NewRegistry(client *clientV3.Client) (*Registry, error) {
 	sess, err := concurrency.NewSession(client)
 	if err != nil {
 		return nil, err
