@@ -4,7 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	pb "github.com/gevinzone/go/rpc/basic/proto/gen"
+	pb "github.com/gevinzone/go/grpc/basic/proto/gen"
 	"google.golang.org/grpc"
 	"io"
 )
