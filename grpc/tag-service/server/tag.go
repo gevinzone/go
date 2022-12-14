@@ -3,9 +3,9 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"github.com/gevinzone/go/rpc/tag-service/pkg/bapi"
-	"github.com/gevinzone/go/rpc/tag-service/pkg/errcode"
-	pb "github.com/gevinzone/go/rpc/tag-service/proto/gen"
+	"github.com/gevinzone/go/grpc/tag-service/pkg/bapi"
+	"github.com/gevinzone/go/grpc/tag-service/pkg/errcode"
+	pb "github.com/gevinzone/go/grpc/tag-service/proto/gen"
 )
 
 type TagServer struct{}

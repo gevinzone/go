@@ -2,8 +2,8 @@ package main
 
 import (
 	"flag"
-	pb "github.com/gevinzone/go/rpc/tag-service/proto/gen"
-	"github.com/gevinzone/go/rpc/tag-service/server"
+	pb "github.com/gevinzone/go/grpc/tag-service/proto/gen"
+	"github.com/gevinzone/go/grpc/tag-service/server"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"log"

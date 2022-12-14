@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	pb "github.com/gevinzone/go/rpc/tag-service/proto/gen"
+	pb "github.com/gevinzone/go/grpc/tag-service/proto/gen"
 	"google.golang.org/grpc"
 	"log"
 )
