@@ -5,6 +5,7 @@ go 1.18
 require (
 	github.com/beego/beego/v2 v2.0.5
 	github.com/gin-gonic/gin v1.8.1
+	github.com/go-redis/redis/v9 v9.0.0-rc.2
 	github.com/golang/mock v1.4.4
 	github.com/mattn/go-sqlite3 v1.14.15
 	github.com/prometheus/client_golang v1.12.1
@@ -25,6 +26,7 @@ require (
 	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.3.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/go-playground/locales v0.14.0 // indirect
 	github.com/go-playground/universal-translator v0.18.0 // indirect
