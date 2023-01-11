@@ -31,6 +31,51 @@ func (n *Node) SetRed() {
 	n.Color = RED
 }
 
+// GetSuccessor 找到删除n时的后继节点
+// 由于n是红黑树的节点，符合二叉搜索树的要求，则查找后继节点的逻辑为：
+// 1. 若n只有一个子节点，则该子节点即为后继节点
+// 2. 若n有2个子节点，则后继节点为右子树的最小节点
+// 		2.1 若n.Right.Left==nil，则Successor=n.Right
+// 		2.2 若n.Right.Left!=nil，则Successor为n.Right.Left这个子树的最左节点
+func (n *Node) GetSuccessor(blackLeaf *Node) *Node {
+	if n.Left == blackLeaf && n.Right == blackLeaf {
+		return nil
+	}
+	if n.Left == blackLeaf || n.Right == blackLeaf {
+		if n.Left == blackLeaf {
+			return n.Right
+		} else {
+			return n.Left
+		}
+	}
+	right := n.Right
+	if right.Left == blackLeaf {
+		return right
+	}
+	var p *Node
+	for right != blackLeaf {
+		p = right
+		right = right.Left
+	}
+	return p
+}
+
+// ReplaceBy 用节点r取代节点n
+func (n *Node) ReplaceBy(r *Node) error {
+	r.Parent = n.Parent
+	r.Left = n.Left
+	r.Right = n.Right
+	if n.Parent == nil {
+		return nil
+	}
+	if n.Parent.Left == n {
+		n.Parent.Left = r
+	} else {
+		n.Parent.Right = r
+	}
+	return nil
+}
+
 type RedBlackTree struct {
 	Root      *Node
 	blackLeaf *Node
@@ -188,7 +233,7 @@ func (r *RedBlackTree) insertFixCase2(n *Node) bool {
 	return r.insertFixCase3(p)
 }
 
-// insertFixCase3 关注节点是 a，它的叔叔节点 u 是黑色，关注节点 n 是其父节点 p 的左子节点
+// insertFixCase3 关注节点是 n，它的叔叔节点 u 是黑色，关注节点 n 是其父节点 p 的左子节点
 // 调整算法为：
 // 1. 围绕关注节点 n 的祖父节点 g 右旋；
 // 2. 将关注节点 n 的父节点 p、兄弟节点 g 的颜色互换(围绕g右旋后，n的原祖父节点g变为n的兄弟节点)。
@@ -200,6 +245,178 @@ func (r *RedBlackTree) insertFixCase3(n *Node) bool {
 	}
 	r.rightRotate(g)
 	p.Color, g.Color = g.Color, p.Color
+	return true
+}
+
+func (r *RedBlackTree) Delete(val int) error {
+	var (
+		node *Node
+		err  error
+	)
+	if node, err = r.Search(val); err != nil {
+		if err == ErrNodeNotFound {
+			return nil
+		}
+		return err
+	}
+	return r.delete(node)
+}
+
+// delete 删除红黑树的节点，主要逻辑是，分2步完成删除：
+// 1. 删除当前节点，并做初步调整，确保完成这一步后，树上的每个节点，依然满足该节点到其每个可达叶子节点的路径上，黑色节点数量相同
+// 2. 在上一步基础上做进一步进行调整，保证每条路径上，不存在相邻红色节点
+// 其中，第一步要分3个case进行处理，第二步分4个case进行处理
+func (r *RedBlackTree) delete(node *Node) error {
+	if r.deleteCase1(node) || r.deleteCase2(node) || r.deleteCase3(node) {
+		return nil
+	}
+	return ErrNodeDeletingFailed
+}
+
+// deleteCase1 要删除的节点是 n，它只有一个子节点 c
+// 算法逻辑是：
+// 1. 删除节点 n，并且把节点 c 替换到节点 n 的位置，这一部分操作跟普通的二叉查找树的删除操作一样；
+// 2. 节点 n 只能是黑色，节点 c 也只能是红色，其他情况均不符合红黑树的定义。这种情况下，我们把节点 c 改为黑色；
+// 3. 调整结束，不需要进行二次调整。
+func (r *RedBlackTree) deleteCase1(n *Node) bool {
+	if n.Left != r.blackLeaf && n.Right != r.blackLeaf {
+		return false
+	}
+	var c *Node
+	if c = n.Left; c == r.blackLeaf {
+		c = n.Right
+	}
+
+	if n.Parent.Left == n {
+		n.Parent.Left = c
+	} else {
+		n.Parent.Right = c
+	}
+	c.SetBlack()
+	//n = nil
+	return true
+}
+
+// deleteCase2 要删除的节点 n 有两个非空子节点，并且它的后继节点就是节点 n 的右子节点 c
+// 算法逻辑是：
+// 1. 如果节点 n 的后继节点就是右子节点 c，那右子节点 c 肯定没有左子树。我们把节点 n 删除，并且将节点 c 替换到节点 n 的位置；
+// 2. 然后把节点 c 的颜色设置为跟节点 n 相同的颜色；
+// 3. 如果节点 c 是黑色，为了不违反红黑树的最后一条定义，我们给节点 c 的右子节点 d 多加一个黑色，这个时候节点 d 就成了“红 - 黑”或者“黑 - 黑”；
+// 4. 这个时候，关注节点变成了节点 d，第二步的调整操作就会针对关注节点来做
+func (r *RedBlackTree) deleteCase2(n *Node) bool {
+	if n.Left == r.blackLeaf || n.Right == r.blackLeaf || n.Right != n.GetSuccessor(r.blackLeaf) {
+		return false
+	}
+	c := n.Right
+	c.Color = n.Color
+	c.Left = n.Left
+	c.Parent = n.Parent
+	if n.Parent.Left == n {
+		n.Parent.Left = c
+	} else {
+		n.Parent.Right = c
+	}
+	d := c.Right
+	return r.deleteFix(d)
+}
+
+// deleteCase3 要删除的是节点 n，它有两个非空子节点，并且节点 n 的后继节点不是右子节点
+// 算法逻辑是：
+// 1. 找到后继节点 d，并将它删除，删除后继节点 d 的过程参照 CASE  1；
+// 2. 将节点 n 替换成后继节点 d；
+// 3. 把节点 d 的颜色设置为跟节点 n 相同的颜色；
+// 4. 如果节点 d 是黑色，为了不违反红黑树的最后一条定义，我们给节点 d 的右子节点 c 多加一个黑色，这个时候节点 c 就成了“红 - 黑”或者“黑 - 黑”；
+// 5. 这个时候，关注节点变成了节点 c，第二步的调整操作就会针对关注节点来做
+func (r *RedBlackTree) deleteCase3(n *Node) bool {
+	d := n.GetSuccessor(r.blackLeaf)
+	if n.Left == r.blackLeaf || n.Right == r.blackLeaf || n.Right == d {
+		return false
+	}
+	r.deleteCase1(d)
+	if err := n.ReplaceBy(d); err != nil {
+		return false
+	}
+	d.Color = n.Color
+	c := d.Right
+	return r.deleteFix(c)
+}
+
+// deleteFix 实现删除节点后的动态调整平衡
+// 要分4种情况实现动态调整，目标是保证每条路径上，红色节点不相邻
+func (r *RedBlackTree) deleteFix(n *Node) bool {
+	if r.deleteFixCase1(n) || r.deleteFixCase2(n) || r.deleteFixCase3(n) || r.deleteFixCase4(n) {
+		return true
+	}
+	return false
+}
+
+// deleteFixCase1 关注节点是 n，它的兄弟节点 b 是红色
+// 调整算法为：
+// 1. 围绕关注节点 n 的父节点 p 左旋；
+// 2. 左旋后，b 成为 p 的父节点，将关注节点 n 的父节点 p 和祖父节点 b 交换颜色；
+// 3. 关注节点不变，继续从四种情况中选择适合的规则来调整
+func (r *RedBlackTree) deleteFixCase1(n *Node) bool {
+	b := r.brother(n)
+	if b == nil || b.IsBlack() {
+		return false
+	}
+	// 既然有兄弟节点，p 一定不为空
+	p := r.parent(n)
+	r.leftRotate(p)
+	// 左旋之后，p一定有父节点，即n一定有祖父节点
+	p.Color, b.Color = b.Color, p.Color
+	return r.deleteFix(n)
+}
+
+// deleteFixCase2 关注节点是 n，它的兄弟节点 b 是黑色的，并且节点 b 的左右子节点 d、e 都是黑色
+// 调整算法为：
+// 1. 将关注节点 n 的兄弟节点 b 的颜色变成红色；
+// 2. 关注节点从 n 变成其父节点 p，继续从四种情况中选择符合的规则来调整。
+func (r *RedBlackTree) deleteFixCase2(n *Node) bool {
+	b := r.brother(n)
+	if b == nil || b.IsRed() || b.Left.IsRed() || b.Right.IsRed() {
+		return false
+	}
+	b.SetRed()
+	// n有兄弟节点，则p一定不为空
+	p := r.parent(n)
+	return r.deleteFix(p)
+}
+
+// deleteFixCase3 关注节点是 n，它的兄弟节点 b 是黑色，b 的左子节点 d 是红色，b 的右子节点 e 是黑色
+// 调整算法如下：
+// 1. 围绕关注节点 n 的兄弟节点 b 右旋；
+// 2. 节点 b 和节点 d 交换颜色；
+// 3. 关注节点不变，跳转到 CASE 4，继续调整。
+func (r *RedBlackTree) deleteFixCase3(n *Node) bool {
+	b := r.brother(n)
+	if b == nil || b.IsRed() || b.Left.IsBlack() || b.Right.IsRed() {
+		return false
+	}
+	d := b.Left
+	r.rightRotate(b)
+	b.Color, d.Color = d.Color, b.Color
+	return r.deleteFixCase4(n)
+}
+
+// deleteFixCase4 关注节点 n 的兄弟节点 b 是黑色的，并且 b 的右子节点是红色
+// 调整算法如下：
+// 1. 围绕关注节点 a 的父节点 p 左旋；
+// 2. 将关注节点 a 的兄弟节点 b 的颜色，设置为关注节点 a 的父节点 p 的颜色；
+// 3. 将关注节点 a 的父节点 p 的颜色设置为黑色；
+// 4. 获取关注节点 a 的叔叔节点 e ，并将 e 设置为黑色；
+// 5. 调整结束。
+func (r *RedBlackTree) deleteFixCase4(n *Node) bool {
+	b := r.brother(n)
+	if b == nil || b.IsRed() || b.Right.IsBlack() {
+		return false
+	}
+	p := r.parent(n)
+	r.leftRotate(p)
+	b.Color = p.Color
+	p.SetBlack()
+	e := r.brother(p)
+	e.SetBlack()
 	return true
 }
 
