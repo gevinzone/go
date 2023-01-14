@@ -31,35 +31,6 @@ func (n *Node) SetRed() {
 	n.Color = RED
 }
 
-// GetSuccessor 找到删除n时的后继节点
-// 由于n是红黑树的节点，符合二叉搜索树的要求，则查找后继节点的逻辑为：
-// 1. 若n只有一个子节点，则该子节点即为后继节点
-// 2. 若n有2个子节点，则后继节点为右子树的最小节点
-// 		2.1 若n.Right.Left==nil，则Successor=n.Right
-// 		2.2 若n.Right.Left!=nil，则Successor为n.Right.Left这个子树的最左节点
-func (n *Node) GetSuccessor(blackLeaf *Node) *Node {
-	if n.Left == blackLeaf && n.Right == blackLeaf {
-		return nil
-	}
-	if n.Left == blackLeaf || n.Right == blackLeaf {
-		if n.Left == blackLeaf {
-			return n.Right
-		} else {
-			return n.Left
-		}
-	}
-	right := n.Right
-	if right.Left == blackLeaf {
-		return right
-	}
-	var p *Node
-	for right != blackLeaf {
-		p = right
-		right = right.Left
-	}
-	return p
-}
-
 // ReplaceBy 用节点r取代节点n
 func (n *Node) ReplaceBy(r *Node) error {
 	r.Parent = n.Parent
@@ -142,6 +113,7 @@ func (r *RedBlackTree) Insert(val int) error {
 func (r *RedBlackTree) insert(node *Node) error {
 	if r.Root == nil {
 		r.Root = node
+		node.Left, node.Right = r.blackLeaf, r.blackLeaf
 		return nil
 	}
 	n := r.Root
@@ -304,7 +276,7 @@ func (r *RedBlackTree) deleteCase1(n *Node) bool {
 // 3. 如果节点 c 是黑色，为了不违反红黑树的最后一条定义，我们给节点 c 的右子节点 d 多加一个黑色，这个时候节点 d 就成了“红 - 黑”或者“黑 - 黑”；
 // 4. 这个时候，关注节点变成了节点 d，第二步的调整操作就会针对关注节点来做
 func (r *RedBlackTree) deleteCase2(n *Node) bool {
-	if n.Left == r.blackLeaf || n.Right == r.blackLeaf || n.Right != n.GetSuccessor(r.blackLeaf) {
+	if n.Left == r.blackLeaf || n.Right == r.blackLeaf || n.Right != r.successor(n) {
 		return false
 	}
 	c := n.Right
@@ -328,7 +300,7 @@ func (r *RedBlackTree) deleteCase2(n *Node) bool {
 // 4. 如果节点 d 是黑色，为了不违反红黑树的最后一条定义，我们给节点 d 的右子节点 c 多加一个黑色，这个时候节点 c 就成了“红 - 黑”或者“黑 - 黑”；
 // 5. 这个时候，关注节点变成了节点 c，第二步的调整操作就会针对关注节点来做
 func (r *RedBlackTree) deleteCase3(n *Node) bool {
-	d := n.GetSuccessor(r.blackLeaf)
+	d := r.successor(n)
 	if n.Left == r.blackLeaf || n.Right == r.blackLeaf || n.Right == d {
 		return false
 	}
@@ -436,6 +408,35 @@ func (r *RedBlackTree) brother(node *Node) *Node {
 		return p.Right
 	}
 	return p.Left
+}
+
+// successor 找到删除n时的后继节点
+// 由于n是红黑树的节点，符合二叉搜索树的要求，则查找后继节点的逻辑为：
+// 1. 若n只有一个子节点，则该子节点即为后继节点
+// 2. 若n有2个子节点，则后继节点为右子树的最小节点
+// 		2.1 若n.Right.Left==nil，则Successor=n.Right
+// 		2.2 若n.Right.Left!=nil，则Successor为n.Right.Left这个子树的最左节点
+func (r *RedBlackTree) successor(n *Node) *Node {
+	if n.Left == r.blackLeaf && n.Right == r.blackLeaf {
+		return nil
+	}
+	if n.Left == r.blackLeaf || n.Right == r.blackLeaf {
+		if n.Left == r.blackLeaf {
+			return n.Right
+		} else {
+			return n.Left
+		}
+	}
+	right := n.Right
+	if right.Left == r.blackLeaf {
+		return right
+	}
+	var p *Node
+	for right != r.blackLeaf {
+		p = right
+		right = right.Left
+	}
+	return p
 }
 
 func (r *RedBlackTree) leftRotate(n *Node) {
