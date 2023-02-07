@@ -12,7 +12,7 @@ type RingBufferCtxBlockingQueue[T any] struct {
 	queueNotFullSignal  *Cond
 }
 
-func NewRingBufferBlockingQueueV2[T any](capacity int) *RingBufferCtxBlockingQueue[T] {
+func NewRingBufferCtxBlockingQueue[T any](capacity int) *RingBufferCtxBlockingQueue[T] {
 	l := &sync.RWMutex{}
 	return &RingBufferCtxBlockingQueue[T]{
 		q:                   newQueue[T](capacity),
