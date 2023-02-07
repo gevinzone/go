@@ -2,14 +2,15 @@ package queue
 
 import (
 	"context"
+	"github.com/gevinzone/go/extend/syncx"
 	"sync"
 )
 
 type RingBufferCtxBlockingQueue[T any] struct {
 	q                   *queue[T]
 	m                   *sync.RWMutex
-	queueNotEmptySignal *Cond
-	queueNotFullSignal  *Cond
+	queueNotEmptySignal *syncx.Cond
+	queueNotFullSignal  *syncx.Cond
 }
 
 func NewRingBufferCtxBlockingQueue[T any](capacity int) *RingBufferCtxBlockingQueue[T] {
@@ -17,8 +18,8 @@ func NewRingBufferCtxBlockingQueue[T any](capacity int) *RingBufferCtxBlockingQu
 	return &RingBufferCtxBlockingQueue[T]{
 		q:                   newQueue[T](capacity),
 		m:                   l,
-		queueNotEmptySignal: NewCond(l),
-		queueNotFullSignal:  NewCond(l),
+		queueNotEmptySignal: syncx.NewCond(l),
+		queueNotFullSignal:  syncx.NewCond(l),
 	}
 }
 
