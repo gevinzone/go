@@ -3,6 +3,7 @@ package practice
 import (
 	"context"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 )
@@ -38,6 +39,68 @@ func TestContextTimeout(t *testing.T) {
 
 	time.Sleep(time.Second * 2)
 	subCancel()
+}
+
+func TestContextTimeoutSelect(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	waitTime := time.Millisecond
+	err := selective(ctx, waitTime)
+	assert.NoError(t, err)
+
+	// 进入default，虽然执行过程中已经超时，但依然会执行完，不会跳到另一个分支
+	waitTime = time.Second * 2
+	err = selective(ctx, waitTime)
+	assert.NoError(t, err)
+
+	// 这是ctx已经超时了
+	waitTime = time.Millisecond
+	err = selective(ctx, waitTime)
+	assert.Equal(t, context.DeadlineExceeded, err)
+}
+
+func TestContextTimeoutSelect2(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	// select 只要进入一个分支，就是执行到结束
+
+	waitTime := time.Millisecond
+	err := selective2(ctx, waitTime)
+	assert.NoError(t, err)
+
+	waitTime = time.Millisecond * 700
+	err = selective2(ctx, waitTime)
+	assert.NoError(t, err)
+
+	// 这时ctx已经超时
+	waitTime = time.Millisecond
+	err = selective2(ctx, waitTime)
+	assert.Equal(t, context.DeadlineExceeded, err)
+}
+
+func selective(ctx context.Context, t time.Duration) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		fmt.Println("processing...")
+		time.Sleep(t)
+		fmt.Println("done.")
+		return nil
+	}
+}
+
+func selective2(ctx context.Context, t time.Duration) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-time.After(t):
+		fmt.Println("processing...")
+		time.Sleep(t * 2)
+		fmt.Println("done.")
+		return nil
+	}
 }
 
 func TestTimeoutExample(t *testing.T) {
